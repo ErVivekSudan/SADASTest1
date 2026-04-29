@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Duckiebot Control</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0b1120;--card:rgba(15,23,42,.82);--border:rgba(56,189,248,.10);
+  --pri:#22d3ee;--pri-g:#38bdf8;--success:#4ade80;--danger:#f87171;--warn:#fbbf24;
+  --txt:#e2e8f0;--muted:#64748b;--dark:#0f172a;
+  --font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace;
+  --r:14px;
+}
+html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--txt);overflow-x:hidden}
+body{display:flex;flex-direction:column;align-items:center;padding:16px 16px 40px}
+
+/* ── Header ─────────────────────────── */
+header{text-align:center;padding:20px 0 8px}
+header h1{font-size:1.6rem;font-weight:700;background:linear-gradient(135deg,var(--pri),var(--pri-g));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent}
+header p{color:var(--muted);font-size:.82rem;margin-top:4px}
+
+/* ── Cards ──────────────────────────── */
+.card{
+  width:100%;max-width:420px;margin:10px 0;padding:20px;
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  transition:border-color .3s;
+}
+.card:hover{border-color:rgba(56,189,248,.22)}
+.card h2{font-size:.85rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:14px}
+
+/* ── Mode Toggle ────────────────────── */
+.mode-bar{display:flex;gap:6px;background:var(--dark);border-radius:10px;padding:4px;max-width:420px;width:100%;margin:8px 0}
+.mode-btn{
+  flex:1;padding:10px;border:none;border-radius:8px;cursor:pointer;
+  font-family:var(--font);font-weight:600;font-size:.85rem;
+  background:transparent;color:var(--muted);transition:.25s;
+}
+.mode-btn.active{background:linear-gradient(135deg,rgba(34,211,238,.15),rgba(56,189,248,.10));color:var(--pri);box-shadow:0 0 20px rgba(34,211,238,.08)}
+
+/* ── Steering Wheel ─────────────────── */
+.wheel-wrap{display:flex;flex-direction:column;align-items:center}
+canvas#wheel{cursor:grab;touch-action:none;width:280px;height:280px}
+canvas#wheel:active{cursor:grabbing}
+.steer-val{font-family:var(--mono);font-size:1.5rem;font-weight:600;color:var(--pri);margin-top:6px}
+.steer-label{font-size:.72rem;color:var(--muted);margin-top:2px}
+
+/* ── Speed Slider ───────────────────── */
+.speed-section{margin-top:18px;width:100%}
+.speed-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+.speed-header label{font-size:.82rem;font-weight:500;color:var(--txt)}
+.speed-num{font-family:var(--mono);font-size:1.05rem;color:var(--success);font-weight:600}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:8px;border-radius:4px;outline:none;background:#1e293b}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:26px;height:26px;border-radius:50%;
+  background:var(--pri);cursor:pointer;box-shadow:0 0 12px rgba(34,211,238,.4);
+  border:2px solid rgba(255,255,255,.15);transition:box-shadow .2s;
+}
+input[type=range]::-webkit-slider-thumb:hover{box-shadow:0 0 20px rgba(34,211,238,.6)}
+input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:var(--pri);cursor:pointer;border:2px solid rgba(255,255,255,.15)}
+
+/* ── Auto Mode Panel ────────────────── */
+.auto-panel{display:none}
+.auto-panel.show{display:block}
+.sse-row{display:flex;gap:8px;margin-bottom:12px}
+.sse-input{
+  flex:1;padding:10px 14px;border-radius:8px;border:1px solid var(--border);
+  background:var(--dark);color:var(--txt);font-family:var(--mono);font-size:.82rem;outline:none;
+  transition:border-color .2s;
+}
+.sse-input:focus{border-color:var(--pri)}
+.btn{
+  padding:10px 18px;border:none;border-radius:8px;font-family:var(--font);font-weight:600;
+  font-size:.82rem;cursor:pointer;transition:.2s;
+}
+.btn-connect{background:linear-gradient(135deg,var(--pri),var(--pri-g));color:var(--dark)}
+.btn-connect:hover{opacity:.85}
+.btn-disconnect{background:rgba(248,113,113,.15);color:var(--danger)}
+.sse-status{display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.dot.ok{background:var(--success);box-shadow:0 0 6px var(--success)}
+.dot.err{background:var(--danger);box-shadow:0 0 6px var(--danger)}
+
+/* ── Telemetry ──────────────────────── */
+.tel-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tel-item{background:var(--dark);border-radius:10px;padding:12px;text-align:center}
+.tel-lbl{font-size:.68rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:4px}
+.tel-val{font-family:var(--mono);font-size:1.1rem;font-weight:600}
+.tel-val.c1{color:var(--pri)}.tel-val.c2{color:var(--success)}.tel-val.c3{color:var(--warn)}.tel-val.c4{color:var(--danger)}
+
+/* ── Emergency stop ─────────────────── */
+.stop-btn{
+  margin-top:14px;width:100%;max-width:420px;padding:16px;border:none;border-radius:var(--r);
+  background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;font-family:var(--font);
+  font-size:1rem;font-weight:700;letter-spacing:1px;cursor:pointer;text-transform:uppercase;
+  transition:.2s;box-shadow:0 4px 24px rgba(220,38,38,.25);
+}
+.stop-btn:hover{opacity:.9;box-shadow:0 4px 30px rgba(220,38,38,.4)}
+.stop-btn:active{transform:scale(.97)}
+
+/* ── Responsive ─────────────────────── */
+@media(min-width:700px){
+  body{padding:24px}
+  .card{padding:28px}
+  header h1{font-size:2rem}
+  canvas#wheel{width:320px;height:320px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🦆 Duckiebot Control</h1>
+  <p>Web-based driving interface</p>
+</header>
+
+<!-- Mode Toggle -->
+<div class="mode-bar">
+  <button class="mode-btn active" id="btn-manual" onclick="setMode('manual')">Manual</button>
+  <button class="mode-btn" id="btn-auto" onclick="setMode('auto')">Auto</button>
+</div>
+
+<!-- Manual Controls -->
+<div class="card" id="manual-card">
+  <h2>Steering &amp; Speed</h2>
+  <div class="wheel-wrap">
+    <canvas id="wheel" width="600" height="600"></canvas>
+    <div class="steer-val" id="steer-val">0.0°</div>
+    <div class="steer-label">Drag to steer · ±27°</div>
+  </div>
+  <div class="speed-section">
+    <div class="speed-header">
+      <label>Speed</label>
+      <span class="speed-num" id="speed-val">0.000</span>
+    </div>
+    <input type="range" id="speed-slider" min="0" max="0.2" step="0.005" value="0">
+  </div>
+</div>
+
+<!-- Auto Mode Panel -->
+<div class="card auto-panel" id="auto-card">
+  <h2>Auto Mode — SSE Stream</h2>
+  <div class="sse-row">
+    <input type="url" class="sse-input" id="sse-url" placeholder="http://host:port/sse">
+    <button class="btn btn-connect" id="btn-sse" onclick="toggleSSE()">Connect</button>
+  </div>
+  <div class="sse-status">
+    <span class="dot" id="sse-dot"></span>
+    <span id="sse-label">Disconnected</span>
+  </div>
+</div>
+
+<!-- Telemetry -->
+<div class="card">
+  <h2>Telemetry</h2>
+  <div class="tel-grid">
+    <div class="tel-item"><div class="tel-lbl">Steer</div><div class="tel-val c1" id="t-steer">0.0°</div></div>
+    <div class="tel-item"><div class="tel-lbl">Brake</div><div class="tel-val c4" id="t-brake">1.000</div></div>
+    <div class="tel-item"><div class="tel-lbl">Left Wheel</div><div class="tel-val c2" id="t-vl">0.0000</div></div>
+    <div class="tel-item"><div class="tel-lbl">Right Wheel</div><div class="tel-val c3" id="t-vr">0.0000</div></div>
+  </div>
+</div>
+
+<!-- Emergency Stop -->
+<button class="stop-btn" onclick="emergencyStop()">⛔ Emergency Stop</button>
+
+<script>
+/* ══════════════════════════════════════════════════════════
+   State
+   ══════════════════════════════════════════════════════════ */
+let steer = 0, speed = 0, mode = 'manual';
+let dragging = false, dragStartAng = 0, dragStartSteer = 0;
+let evtSource = null, sseConnected = false;
+const MAX_STEER = 27, MAX_SPEED = 0.2, BRAKE_ZERO = 0.8;
+
+/* ── DOM refs ──────────────────────────────────────────── */
+const canvas  = document.getElementById('wheel');
+const ctx     = canvas.getContext('2d');
+const steerEl = document.getElementById('steer-val');
+const speedEl = document.getElementById('speed-val');
+const slider  = document.getElementById('speed-slider');
+
+/* ══════════════════════════════════════════════════════════
+   Canvas — Steering Wheel
+   ══════════════════════════════════════════════════════════ */
+const W = canvas.width, H = canvas.height, CX = W/2, CY = H/2;
+const RIM_R = W * 0.37, RIM_T = W * 0.055;
+const SCALE_R = W * 0.46;
+
+function drawWheel(){
+  ctx.clearRect(0,0,W,H);
+
+  /* ── Degree scale (fixed) ───────────────────────────── */
+  for(let d = -MAX_STEER; d <= MAX_STEER; d += 1){
+    const a = (-90 + d) * Math.PI/180;
+    const major = d % 5 === 0;
+    const inner = SCALE_R - (major ? 16 : 8);
+    ctx.beginPath();
+    ctx.moveTo(CX + Math.cos(a)*inner, CY + Math.sin(a)*inner);
+    ctx.lineTo(CX + Math.cos(a)*SCALE_R, CY + Math.sin(a)*SCALE_R);
+    ctx.strokeStyle = d===0 ? '#22d3ee' : major ? '#475569' : '#1e293b';
+    ctx.lineWidth = major ? 2.5 : 1.2;
+    ctx.stroke();
+    if(major){
+      ctx.font = '18px Inter';
+      ctx.fillStyle = d===0?'#22d3ee':'#475569';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(d+'°', CX + Math.cos(a)*(SCALE_R+20), CY + Math.sin(a)*(SCALE_R+20));
+    }
+  }
+
+  /* ── Pointer (current angle on scale) ───────────────── */
+  const pa = (-90 + steer) * Math.PI/180;
+  ctx.beginPath();
+  ctx.moveTo(CX + Math.cos(pa)*(RIM_R + RIM_T + 4), CY + Math.sin(pa)*(RIM_R + RIM_T + 4));
+  ctx.lineTo(CX + Math.cos(pa)*(SCALE_R - 2), CY + Math.sin(pa)*(SCALE_R - 2));
+  ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.stroke();
+
+  /* ── Rotating wheel ─────────────────────────────────── */
+  ctx.save();
+  ctx.translate(CX, CY);
+  ctx.rotate(steer * Math.PI/180);
+
+  // outer rim
+  ctx.beginPath(); ctx.arc(0,0,RIM_R,0,Math.PI*2);
+  ctx.lineWidth = RIM_T;
+  const rg = ctx.createLinearGradient(-RIM_R,-RIM_R,RIM_R,RIM_R);
+  rg.addColorStop(0,'#334155'); rg.addColorStop(.5,'#1e293b'); rg.addColorStop(1,'#334155');
+  ctx.strokeStyle = rg; ctx.stroke();
+
+  // rim highlight
+  ctx.beginPath(); ctx.arc(0,0,RIM_R + RIM_T/2 - 1,0,Math.PI*2);
+  ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(148,163,184,.12)'; ctx.stroke();
+  ctx.beginPath(); ctx.arc(0,0,RIM_R - RIM_T/2 + 1,0,Math.PI*2);
+  ctx.stroke();
+
+  // top marker
+  ctx.beginPath();
+  ctx.arc(0, -(RIM_R), 8, 0, Math.PI*2);
+  ctx.fillStyle = '#22d3ee'; ctx.fill();
+
+  // spokes (Y shape)
+  const spokeAngles = [-90, 150, 30];
+  spokeAngles.forEach(deg => {
+    const a = deg * Math.PI/180;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a)*32, Math.sin(a)*32);
+    ctx.lineTo(Math.cos(a)*(RIM_R - RIM_T/2), Math.sin(a)*(RIM_R - RIM_T/2));
+    ctx.lineWidth = 12; ctx.strokeStyle = '#1e293b'; ctx.lineCap = 'round'; ctx.stroke();
+    ctx.lineWidth = 6; ctx.strokeStyle = '#334155'; ctx.stroke();
+  });
+
+  // center hub
+  ctx.beginPath(); ctx.arc(0,0,28,0,Math.PI*2);
+  const hg = ctx.createRadialGradient(0,0,0,0,0,28);
+  hg.addColorStop(0,'#334155'); hg.addColorStop(1,'#1e293b');
+  ctx.fillStyle = hg; ctx.fill();
+  ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(148,163,184,.15)'; ctx.stroke();
+
+  // hub icon
+  ctx.font = '18px Inter'; ctx.fillStyle = '#64748b'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('🦆',0,1);
+
+  ctx.restore();
+}
+
+/* ══════════════════════════════════════════════════════════
+   Pointer / Touch interaction
+   ══════════════════════════════════════════════════════════ */
+function ptrAngle(e){
+  const r = canvas.getBoundingClientRect();
+  const sx = canvas.width / r.width;
+  const x = (e.clientX - r.left)*sx - CX;
+  const y = (e.clientY - r.top)*sx  - CY;
+  return Math.atan2(y, x);
+}
+
+canvas.addEventListener('pointerdown', e => {
+  if(mode!=='manual') return;
+  dragging = true; dragStartAng = ptrAngle(e); dragStartSteer = steer;
+  canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener('pointermove', e => {
+  if(!dragging) return;
+  let da = ptrAngle(e) - dragStartAng;
+  while(da >  Math.PI) da -= 2*Math.PI;
+  while(da < -Math.PI) da += 2*Math.PI;
+  steer = Math.max(-MAX_STEER, Math.min(MAX_STEER, dragStartSteer + da*180/Math.PI));
+  steerEl.textContent = steer.toFixed(1) + '°';
+  drawWheel(); scheduleControl();
+});
+canvas.addEventListener('pointerup',   () => { dragging = false; });
+canvas.addEventListener('pointercancel',() => { dragging = false; });
+
+// Double-tap to center
+canvas.addEventListener('dblclick', () => {
+  if(mode!=='manual') return;
+  steer = 0; steerEl.textContent = '0.0°'; drawWheel(); scheduleControl();
+});
+
+/* ── Speed slider ──────────────────────────────────────── */
+slider.addEventListener('input', () => {
+  speed = parseFloat(slider.value);
+  speedEl.textContent = speed.toFixed(3);
+  // colour fill
+  const pct = (speed / MAX_SPEED) * 100;
+  slider.style.background = `linear-gradient(to right,#22d3ee 0%,#22d3ee ${pct}%,#1e293b ${pct}%,#1e293b 100%)`;
+  scheduleControl();
+});
+
+/* ══════════════════════════════════════════════════════════
+   API Communication (throttled to ~20 Hz)
+   ══════════════════════════════════════════════════════════ */
+let lastSend = 0, sendTimer = null;
+const SEND_MS = 50;
+
+function scheduleControl(){
+  const now = Date.now();
+  if(now - lastSend >= SEND_MS){ sendControl(); lastSend = now; }
+  else if(!sendTimer){
+    sendTimer = setTimeout(()=>{ sendControl(); lastSend = Date.now(); sendTimer = null; }, SEND_MS - (now - lastSend));
+  }
+}
+
+function sendControl(){
+  const brake = (speed <= 0) ? 1.0 : Math.max(0, BRAKE_ZERO * (1 - speed / MAX_SPEED));
+  fetch('/api/control',{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ steer: Math.round(steer*100)/100, brake: Math.round(brake*1000)/1000 })
+  }).catch(()=>{});
+}
+
+/* keep-alive (prevents safety timeout when user holds position) */
+setInterval(()=>{ if(mode==='manual' && speed > 0) sendControl(); }, 200);
+
+/* ══════════════════════════════════════════════════════════
+   Mode Switching
+   ══════════════════════════════════════════════════════════ */
+function setMode(m){
+  mode = m;
+  document.getElementById('btn-manual').classList.toggle('active', m==='manual');
+  document.getElementById('btn-auto').classList.toggle('active',   m==='auto');
+  document.getElementById('manual-card').style.display = m==='manual' ? '' : 'none';
+  document.getElementById('auto-card').classList.toggle('show', m==='auto');
+  fetch('/api/mode',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:m})}).catch(()=>{});
+  if(m==='manual' && evtSource){ evtSource.close(); evtSource=null; setSseStatus(false); }
+}
+
+/* ══════════════════════════════════════════════════════════
+   Auto Mode — SSE
+   ══════════════════════════════════════════════════════════ */
+function toggleSSE(){
+  if(evtSource){ evtSource.close(); evtSource=null; setSseStatus(false); return; }
+  const url = document.getElementById('sse-url').value.trim();
+  if(!url) return;
+  try{
+    evtSource = new EventSource(url);
+    evtSource.onopen = ()=> setSseStatus(true);
+    evtSource.onmessage = e => {
+      try{
+        const d = JSON.parse(e.data);
+        const s = parseFloat(d.steer)||0, b = parseFloat(d.brake)||0;
+        fetch('/api/control',{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({steer:s, brake:b})}).catch(()=>{});
+      }catch(_){}
+    };
+    evtSource.onerror = ()=> setSseStatus(false,'Error');
+  }catch(_){ setSseStatus(false,'Invalid URL'); }
+}
+
+function setSseStatus(ok, lbl){
+  sseConnected = ok;
+  const dot = document.getElementById('sse-dot');
+  const lb  = document.getElementById('sse-label');
+  const btn = document.getElementById('btn-sse');
+  dot.className = 'dot ' + (ok?'ok':'err');
+  lb.textContent = lbl || (ok ? 'Connected' : 'Disconnected');
+  btn.textContent = ok ? 'Disconnect' : 'Connect';
+  btn.className = 'btn ' + (ok ? 'btn-disconnect' : 'btn-connect');
+}
+
+/* ══════════════════════════════════════════════════════════
+   Emergency Stop
+   ══════════════════════════════════════════════════════════ */
+function emergencyStop(){
+  steer = 0; speed = 0; slider.value = 0;
+  slider.style.background = '#1e293b';
+  speedEl.textContent = '0.000'; steerEl.textContent = '0.0°';
+  drawWheel();
+  fetch('/api/control',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({steer:0, brake:1})}).catch(()=>{});
+  if(evtSource){ evtSource.close(); evtSource=null; setSseStatus(false); }
+}
+
+/* ══════════════════════════════════════════════════════════
+   Telemetry polling (5 Hz)
+   ══════════════════════════════════════════════════════════ */
+setInterval(()=>{
+  fetch('/api/status').then(r=>r.json()).then(d=>{
+    document.getElementById('t-steer').textContent = d.steer.toFixed(1)+'°';
+    document.getElementById('t-brake').textContent = d.brake.toFixed(3);
+    document.getElementById('t-vl').textContent    = d.vel_left.toFixed(4);
+    document.getElementById('t-vr').textContent    = d.vel_right.toFixed(4);
+  }).catch(()=>{});
+}, 200);
+
+/* ── Init ──────────────────────────────────────────────── */
+drawWheel();
+</script>
+</body>
+</html>

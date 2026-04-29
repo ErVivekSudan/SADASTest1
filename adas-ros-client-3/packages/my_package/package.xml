@@ -1,0 +1,11 @@
+<package>
+  <name>my_package</name>
+  <version>1.0.0</version>
+  <description>
+  Web-controlled Duckiebot driving: Manual steering + Auto SSE mode.
+  </description>
+  <maintainer email="srabanmondal1@gmail.com">SrabanMondal</maintainer>
+  <license>None</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+</package>

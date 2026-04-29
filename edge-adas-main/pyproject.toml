@@ -1,0 +1,18 @@
+[project]
+name = "autonomy-server"
+version = "2.1.0"
+description = "ASDV Edge ADAS — Secure Autonomous Navigation Server"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.126.0",
+    "msgpack>=1.1.2",
+    "numpy>=2.3.5",
+    "opencv-python>=4.11.0.86",
+    "openvino>=2025.4.1",
+    "scipy>=1.17.0",
+    "tqdm>=4.67.1",
+    "uvicorn[standard]>=0.40.0",
+    "python-dotenv>=1.0.0",   # NEW: load .env security config
+    "pydantic>=2.0.0",        # explicit: used in models
+]
