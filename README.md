@@ -1318,9 +1318,7 @@ ASDV_LOG_DIR=logs
 
 ---
 
-**Report Prepared by:** Cybersecurity Team  
-**Final Evaluation:** May 2026  
-**Project Duration:** January 2026 — May 2026  
+**Report Prepared by:** Vivek Sudan   
 **Total Security Implementations:** 9 vulnerabilities fixed, 5-layer defense model, < 1% performance overhead  
 
 ---
