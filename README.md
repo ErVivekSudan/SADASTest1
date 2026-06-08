@@ -5,11 +5,7 @@
 ---
 
 **Project Title:** Secure Autonomous Driving Assistance System (SADAS)  
-**Campus Autonomous Vehicle System:** NVIDIA Jetson Nano + Duckiebot  
-**Security Lead:** Cybersecurity Team Member  
-**Report Version:** 1.0 — Final Evaluation  
-**Date:** May 2026  
-**Classification:** Academic Project Report  
+**Campus Autonomous Vehicle System:** NVIDIA Jetson Nano + Duckiebot   
 
 ---
 
